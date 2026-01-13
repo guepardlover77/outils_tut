@@ -161,3 +161,149 @@ function sheetToArray(sheet, options = {}) {
 function sheetToObjects(sheet, options = {}) {
     return XLSX.utils.sheet_to_json(sheet, options);
 }
+
+// Moodle API Client
+class MoodleAPI {
+    constructor(baseUrl, token) {
+        this.baseUrl = baseUrl.replace(/\/+$/, ''); // Remove trailing slashes
+        this.token = token;
+    }
+
+    /**
+     * Call a Moodle web service function.
+     * @param {string} wsfunction - The web service function name
+     * @param {object} params - Additional parameters
+     * @returns {Promise<object>} - The API response
+     */
+    async call(wsfunction, params = {}) {
+        const url = `${this.baseUrl}/webservice/rest/server.php`;
+
+        const formData = new URLSearchParams();
+        formData.append('wstoken', this.token);
+        formData.append('wsfunction', wsfunction);
+        formData.append('moodlewsrestformat', 'json');
+
+        // Add additional parameters
+        for (const [key, value] of Object.entries(params)) {
+            formData.append(key, value);
+        }
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString(),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Check for Moodle error response
+        if (data.exception) {
+            throw new Error(data.message || data.exception);
+        }
+
+        return data;
+    }
+
+    /**
+     * Test the connection to Moodle.
+     * @returns {Promise<object>} - Site info if successful
+     */
+    async testConnection() {
+        return this.call('core_webservice_get_site_info');
+    }
+
+    /**
+     * Get list of courses the user can import questions to.
+     * @returns {Promise<array>} - List of courses
+     */
+    async getCourses() {
+        return this.call('local_questionimporter_get_courses');
+    }
+
+    /**
+     * Get question categories for a course.
+     * @param {number} courseId - The course ID
+     * @returns {Promise<array>} - List of question categories
+     */
+    async getQuestionCategories(courseId) {
+        return this.call('local_questionimporter_get_question_categories', {
+            courseid: courseId,
+        });
+    }
+
+    /**
+     * Import questions from XML content.
+     * @param {number} categoryId - Target question category ID
+     * @param {string} xmlContent - The XML content (will be base64 encoded)
+     * @returns {Promise<object>} - Import result
+     */
+    async importQuestions(categoryId, xmlContent) {
+        // Base64 encode the XML content
+        const base64Content = btoa(unescape(encodeURIComponent(xmlContent)));
+
+        return this.call('local_questionimporter_import_questions', {
+            categoryid: categoryId,
+            xmlcontent: base64Content,
+        });
+    }
+}
+
+// Moodle Settings Manager
+class MoodleSettings {
+    static STORAGE_KEY = 'moodle_settings';
+    static TOKEN_KEY = 'moodle_token';
+
+    /**
+     * Save Moodle settings (URL only - token stored separately in sessionStorage).
+     * @param {object} settings - { url: string }
+     */
+    static save(settings) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+            url: settings.url,
+        }));
+    }
+
+    /**
+     * Save the token to sessionStorage (more secure - cleared on browser close).
+     * @param {string} token - The Moodle API token
+     */
+    static saveToken(token) {
+        sessionStorage.setItem(this.TOKEN_KEY, token);
+    }
+
+    /**
+     * Load saved settings.
+     * @returns {object} - { url: string, token: string }
+     */
+    static load() {
+        const saved = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+        const token = sessionStorage.getItem(this.TOKEN_KEY) || '';
+        return {
+            url: saved.url || '',
+            token: token,
+        };
+    }
+
+    /**
+     * Clear all saved settings.
+     */
+    static clear() {
+        localStorage.removeItem(this.STORAGE_KEY);
+        sessionStorage.removeItem(this.TOKEN_KEY);
+    }
+
+    /**
+     * Check if settings are configured.
+     * @returns {boolean}
+     */
+    static isConfigured() {
+        const settings = this.load();
+        return !!(settings.url && settings.token);
+    }
+}
