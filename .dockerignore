@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Fichiers temporaires
+*.log
+*.tmp
+tmpclaude-*
+
+# Python
+__pycache__
+*.py
+*.pyc
+.Python
+env/
+venv/
+
+# Fichiers Excel d'exemple
+exemple.xlsx
+las1.xlsx
+las2.xlsx
+
+# Claude
+.claude/
+
+# Documentation locale
+*.md
+!moodle-plugin/README.md
