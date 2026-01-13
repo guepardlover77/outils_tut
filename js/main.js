@@ -212,10 +212,18 @@ class MoodleAPI {
 
     /**
      * Test the connection to Moodle.
-     * @returns {Promise<object>} - Site info if successful
+     * @returns {Promise<object>} - Connection info if successful
      */
     async testConnection() {
-        return this.call('core_webservice_get_site_info');
+        // Use getCourses to test connection since core_webservice_get_site_info
+        // may not be available in the Question Importer service
+        const courses = await this.call('local_questionimporter_get_courses');
+        return {
+            success: true,
+            sitename: 'Moodle',
+            fullname: 'Utilisateur connecté',
+            coursecount: courses.length
+        };
     }
 
     /**

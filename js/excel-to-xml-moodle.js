@@ -90,8 +90,8 @@ async function testMoodleConnection() {
         moodleApi = new MoodleAPI(url, token);
         const siteInfo = await moodleApi.testConnection();
 
-        logger.success(`Connecte a: ${siteInfo.sitename}`);
-        logger.info(`Utilisateur: ${siteInfo.fullname}`);
+        logger.success(`Connexion reussie !`);
+        logger.info(`${siteInfo.coursecount} cours disponible(s)`);
 
         // Save settings on successful connection
         MoodleSettings.save({ url });
